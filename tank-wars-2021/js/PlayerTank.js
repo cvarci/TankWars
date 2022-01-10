@@ -48,4 +48,12 @@ class PlayerTank extends BaseTank {
         this.turret.rotation = Phaser.Math.Angle.Between(this.turret.x, this.turret.y, worldPoint.x, worldPoint.y)
     }
 
+    damage(){
+        this.scene.cameras.main.shake(200,0.005)
+        this.damageCount++
+        if(this.isDestroyed()){
+            this.burn()
+        }
+    }
+
 }

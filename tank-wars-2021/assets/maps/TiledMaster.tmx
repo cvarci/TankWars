@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.4" tiledversion="1.4.3" orientation="orthogonal" renderorder="right-down" width="40" height="10" tilewidth="64" tileheight="64" infinite="0" nextlayerid="4" nextobjectid="3">
+<map version="1.4" tiledversion="1.4.3" orientation="orthogonal" renderorder="right-down" width="40" height="10" tilewidth="64" tileheight="64" infinite="0" nextlayerid="4" nextobjectid="9">
+ <editorsettings>
+  <export target="level2.json" format="json"/>
+ </editorsettings>
  <tileset firstgid="1" name="Environment" tilewidth="64" tileheight="64" tilecount="30" columns="6">
   <image source="../tanks/landscape-tileset.png" width="384" height="320"/>
   <tile id="24">
@@ -56,6 +59,24 @@
    <point/>
   </object>
   <object id="2" type="enemySpawn" x="2308" y="446">
+   <point/>
+  </object>
+  <object id="3" type="enemySpawn" x="353.194" y="104.65">
+   <point/>
+  </object>
+  <object id="4" type="enemySpawn" x="601.737" y="595.197">
+   <point/>
+  </object>
+  <object id="5" type="enemySpawn" x="111.191" y="601.737">
+   <point/>
+  </object>
+  <object id="6" type="enemySpawn" x="1510.88" y="614.819">
+   <point/>
+  </object>
+  <object id="7" type="enemySpawn" x="2093" y="98.1094">
+   <point/>
+  </object>
+  <object id="8" type="bossSpawn" x="1452.02" y="209.3">
    <point/>
   </object>
  </objectgroup>
