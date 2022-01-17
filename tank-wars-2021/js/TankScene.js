@@ -14,20 +14,48 @@ class TankScene extends Phaser.Scene {
     enemyBullets
     /** @type {Phaser.GameObjects.Group} */
     explosions
+    /** @type {Phaser.GameObjects.Image} */
+    healthBar
+    /** @type {Phaser.GameObjects.Image} */
+    bulletBar
+    /** @type {Phaser.GameObjects.Sprite} */
+    crosshair
+    /** @type {Phaser.GameObjects.Text} */
+    Remaining
+
+    enemiesLeft = 0
+    constructor(){
+        super('TankScene')
+    }
+
     preload() {
         this.load.image('bullet','assets/tanks/bullet.png')
-        this.load.atlas('tank','assets/tanks/tanks.png','assets/tanks/tanks.json')
-        this.load.atlas('enemy','assets/tanks/enemy-tanks.png','assets/tanks/tanks.json')
-        this.load.atlas('boss','assets/tanks/boss-tanks.png','assets/tanks/tanks.json')
+        this.load.atlas('tank','assets/tanks/newTank.png','assets/tanks/newTanks.json')
+        this.load.atlas('enemy','assets/tanks/enemy-tanks.png','assets/tanks/newTanks.json')
+        this.load.atlas('boss','assets/tanks/boss-tanks.png','assets/tanks/newTanks.json')
         this.load.image('tileset','assets/tanks/landscape-tileset.png')
         this.load.tilemapTiledJSON('tilemap','assets/maps/level2.json')
-        this.load.spritesheet('explosion','assets/tanks/explosion.png',{
+        this.load.spritesheet('explosion','assets/tanks/explosion_c.png',{
             frameWidth: 64,
             frameHeight: 64,
         })
+        this.load.spritesheet('health-bar','assets/tanks/Health-bar.png',{
+            frameWidth: 65,
+            frameHeight: 144
+        })
+        this.load.spritesheet('bullet-bar','assets/tanks/Bullet-count.png',{
+            frameWidth: 80,
+            frameHeight: 164
+        })
+        this.load.spritesheet('cooldown','assets/tanks/cooldown.png',{
+            frameWidth: 51,
+            frameHeight: 13
+        })
+
     }
     create() {
         //Init Level
+        console.log("start")
         this.map = this.make.tilemap({key:'tilemap'})
         const landscape = this.map.addTilesetImage('Environment','tileset')
         this.map.createLayer('backgroundLayer',[landscape],0,0)
@@ -42,9 +70,17 @@ class TankScene extends Phaser.Scene {
         this.playerBullets = this.physics.add.group({
             defaultKey: 'bullet',
             maxSize: 5
+            
         })
 
-
+        //UI
+        this.healthBar = this.add.image(780,550,'health-bar',0).setScrollFactor(0).setDepth(10)
+        this.bulletBar = this.add.image(60,540,'bullet-bar',0).setScrollFactor(0).setDepth(10)
+        this.crosshair = this.add.sprite(416,320,'cooldown',16).setScrollFactor(0).setDepth(10)
+        this.Remaining = this.add.text(20,20,"Enemies Remaining: "+this.enemiesLeft,{
+            fontFamily:'CustomFont',
+            fontSize: '22px'
+        }).setScrollFactor(0)
 
         let enemyObjects = []
         let actor
@@ -75,6 +111,15 @@ class TankScene extends Phaser.Scene {
         }),
         frameRate: 24,
         })
+        this.anims.create({
+            key: 'cool',
+            frames: this.anims.generateFrameNumbers('cooldown',{
+                start:0,
+                end:16,
+                first: 16,
+            }),
+            frameRate: 24
+        })
 
         //Camera
         this.cameras.main.setBounds(0,0,this.map.widthInPixels,this.map.heightInPixels)
@@ -86,6 +131,7 @@ class TankScene extends Phaser.Scene {
             this.disposeBullet(body.gameObject.disableBody(true,true))
         },this)
 
+        
 
     }
     update(time, delta) {
@@ -93,22 +139,35 @@ class TankScene extends Phaser.Scene {
         for(let i = 0;i<this.enemyArray.length;i++){
             this.enemyArray[i].update(time,delta)
         }
+        this.crosshair.setPosition(this.input.x,this.input.y+30)
     }
 
     createPlayer(dataObj){
         this.player = new PlayerTank(this,dataObj.x,dataObj.y,'tank','tank1')
         this.player.enableCollisions(this.destructLayer)
+        this.player.bulletCount = 5
     }
 
     tryShoot(pointer){
-        /**@type {Phaser.Physics.Arcade.Sprite} */
-        let bullet = this.playerBullets.get(this.player.turret.x,this.player.turret.y)
-        if(bullet){
-            this.fireBullet(bullet,this.player.turret.rotation,this.enemyArray)
+        if(this.player.canShoot){
+            /**@type {Phaser.Physics.Arcade.Sprite} */
+            let bullet = this.playerBullets.get(this.player.turret.x,this.player.turret.y)
+            if(bullet){
+                this.fireBullet(bullet,this.player.turret.rotation,this.enemyArray)
+                this.player.bulletCount--
+                this.updateCounter(this.player.bulletCount)
+                this.crosshair.anims.play('cool')
+                this.player.canShoot = false
+                this.crosshair.on('animationcomplete',() =>{
+                    this.player.canShoot = true
+    })
+}
         }
+        
     }
     fireBullet(bullet,rotation,target){
         //Bullet is a sprite
+        
         bullet.setDepth(3)
         bullet.body.collideWorldBounds = true
         bullet.body.onWorldBounds = true
@@ -126,19 +185,43 @@ class TankScene extends Phaser.Scene {
             }
         }
     }
+
+    updateCounter(bullet){
+        this.bulletBar.setFrame(5-bullet)
+    }
+    updateLeft(num){
+        this.Remaining.setText("Enemies Remaining: "+num)
+    }
+
     bulletHitPlayer(player,bullet){
         this.disposeBullet(bullet)
         this.player.damage()
+        this.updateHealth(this.player.damageCount)
         if(this.player.isDestroyed()){
             this.input.enabled = false
             this.enemyArray = []
             this.physics.pause()
             let explosion = this.explosions.get(this.player.hull.x,this.player.hull.y)
+            this.cameras.main.fadeOut(1500, 0, 0, 0)
+            this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, (cam, effect) => {
+                this.endGame()
+            })
             if(explosion){
                 this.activateExplosion(explosion)
                 explosion.on('animationcomplete',this.animComplete,this)
                 explosion.play('explode')
             }
+        }
+    }
+    updateHealth(dmg){
+        if(dmg<=3){
+            this.healthBar.setFrame(0)
+        }else if(dmg>3&&dmg<6){
+            this.healthBar.setFrame(1)
+        }else if(dmg>=6&&dmg<9){
+            this.healthBar.setFrame(2)
+        }else{
+            this.healthBar.setFrame(3)
         }
     }
     bulletHitEnemy(hull,bullet){
@@ -160,6 +243,8 @@ class TankScene extends Phaser.Scene {
             
         }
         if(enemy.isDestroyed()){
+            this.enemiesLeft--
+            this.updateLeft(this.enemiesLeft)
             let explosion = this.explosions.get(hull.x,hull.y)
             if(explosion){
                 this.activateExplosion(explosion)
@@ -168,7 +253,9 @@ class TankScene extends Phaser.Scene {
             }
             //remove from array
             this.enemyArray.splice(index,1)
-            
+            if(this.enemiesLeft<=0){
+                this.endGame()
+            }
         }
     }
     animComplete(animation,frame,obj){
@@ -194,13 +281,20 @@ class TankScene extends Phaser.Scene {
     }
     disposeBullet(bullet){
         bullet.disableBody(true,true)
+        if(this.playerBullets.contains(bullet)){
+            this.player.bulletCount++
+            this.updateCounter(this.player.bulletCount)
+        }
+        
     }
 
 
     createEnemy(dataObj){
+        this.enemiesLeft++
+        this.updateLeft(this.enemiesLeft)
         let enemyTank
         if(dataObj.type == 'enemySpawn'){
-            enemyTank = new EnemyTank(this,dataObj.x,dataObj.y,'enemy','tank3',this.player)
+            enemyTank = new EnemyTank(this,dataObj.x,dataObj.y,'enemy','tank1',this.player)
             enemyTank.initMovement()
             enemyTank.enableCollisions(this.destructLayer,this.player.hull)
             enemyTank.setBullets(this.enemyBullets)
@@ -211,7 +305,7 @@ class TankScene extends Phaser.Scene {
                 }
             }
         }else if(dataObj.type == 'bossSpawn'){
-            enemyTank = new BossTank(this,dataObj.x,dataObj.y,'boss','tank3',this.player)
+            enemyTank = new BossTank(this,dataObj.x,dataObj.y,'boss','tank1',this.player)
             enemyTank.initMovement()
             enemyTank.enableCollisions(this.destructLayer,this.player.hull)
             enemyTank.setBullets(this.enemyBullets)
@@ -223,5 +317,13 @@ class TankScene extends Phaser.Scene {
             }
         }
  
+    }
+    endGame(){
+        if(this.enemiesLeft<=0){
+            this.scene.start('Level2')
+        }else{
+            this.scene.restart()
+        }
+        
     }
 }

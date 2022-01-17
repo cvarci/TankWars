@@ -1,4 +1,6 @@
 class PlayerTank extends BaseTank {
+    bulletCount = 5
+    canShoot = true
 
     constructor(scene, x, y, texture, frame) {
         super(scene, x, y, texture, frame)

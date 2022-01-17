@@ -3,7 +3,7 @@ class EnemyTank extends BaseTank{
     /** @type {PlayerTank} */
     player
     /** @type {number} */
-    range = 250
+    range = 350
     /** @type {number} */
     shotInterval = 2000
     /** @type {number} */
